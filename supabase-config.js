@@ -1,19 +1,14 @@
 // ==============================================================================
 // CẤU HÌNH KẾT NỐI SUPABASE CHO POLICE REPORT
 // ==============================================================================
-// Bạn có 3 cách kết nối:
-// Cách 1: Điền trực tiếp URL và ANON KEY vào bên dưới, sau đó git push lên Vercel.
-// Cách 2: Nhập qua nút "Cấu hình Supabase" trên giao diện web (lưu vào trình duyệt).
-// Cách 3: Thêm SUPABASE_URL và SUPABASE_ANON_KEY trong mục Environment Variables trên Vercel.
-//
-// Lấy thông tin này tại: Supabase Dashboard -> Project Settings -> API
-// - Project URL (URL)
-// - Project API keys -> anon / public (Anon Key)
+// Để bảo mật dự án và không làm lộ API Key trên GitHub:
+// - Bạn có thể cấu hình trực tiếp qua nút "Cấu hình Supabase" trên giao diện Web (lưu vào trình duyệt của bạn).
+// - Hoặc thêm SUPABASE_URL và SUPABASE_ANON_KEY trong mục Settings -> Environment Variables trên Vercel.
 // ==============================================================================
 
 var SUPABASE_CONFIG = {
-  url: 'https://enlocvtauuhcyrrngskk.supabase.co',      // Ví dụ: 'https://xyzabcdefghijklmno.supabase.co'
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVubG9jdnRhdXVoY3lycm5nc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTA0MDgsImV4cCI6MjEwODgyNjQwOH0.ydGgFGARZOH8it0rhOofPdgpJ9woZP2LANeQ02ZbEmQ'  // Ví dụ: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  url: '',
+  anonKey: ''
 };
 
 if (typeof window !== 'undefined') {
