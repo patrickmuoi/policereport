@@ -9,3 +9,4 @@ export default function handler(req, res) {
   const configJson = JSON.stringify({ url, anonKey });
   res.status(200).send(`window.ENV_SUPABASE_CONFIG = ${configJson};`);
 }
+

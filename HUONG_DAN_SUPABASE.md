@@ -132,3 +132,4 @@ Sau khi chạy file SQL `supabase_schema.sql`, database đã có sẵn các tài
 - `type` (text): `arrest` (bắt giữ) hoặc `search` (khám xét)
 - `citizen`, `citizen_id`, `location`, `reason`: Thông tin đối tượng và căn cứ
 - `requested_by`, `status`, `approved_by`: Tiến trình duyệt lệnh
+
