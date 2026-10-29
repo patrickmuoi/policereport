@@ -122,7 +122,7 @@ evidence:{t:'TANG VẬT / BẰNG CHỨNG',n:'Vật chứng',f:[['tag','Mã bằn
 const SEC=Object.keys(SC);
 const mkD=(name,color)=>({name,color,logo:'',stamp:''});
 
-let db=null,me=null,view='dash',draft=null,cur=null,LD='LSPD',F={q:'',st:''},sel=null,activeWarrantId=null;
+let db=null,me=null,view='dash',draft=null,cur=null,LD='LSPD',F={q:'',st:'',dept:''},sel=null,activeWarrantId=null;
 let sbClient=null;
 
 let fresh=!1;try{db=JSON.parse(localStorage.getItem('pdb4'))}catch(e){}
@@ -154,7 +154,8 @@ async function withLoading(fn,text='Đang xử lý...',minDelay=1000){
 const fmt=d=>d?new Date(d).toLocaleString('vi-VN'):'';
 const logoSrc=k=>db.depts[k].logo||ASSET_LOGOS[k];
 const logo=(k,s)=>{const src=logoSrc(k);return `<div class="logo" style="width:${s}px;height:${s}px;font-size:${s/4}px">${src?`<img src="${esc(src)}" alt="Logo ${esc(k)}">`:k}</div>`};
-const scope=()=>db.cases.filter(c=>c.dept==me.dept);
+const deptCases=d=>db.cases.filter(c=>c.dept==(d||(me?me.dept:LD)));
+const scope=()=>db.cases;
 const keep=()=>{const e=$('#ed');if(e)draft.narr=e.innerHTML};
 const rs=(f,max,type,cb)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL(type,.72))};im.src=r.result};r.readAsDataURL(f)};
 const stamp=(c,D)=>D.stamp?`<img src="${D.stamp}" style="width:150px;height:150px;object-fit:contain" alt="">`:`<svg width="160" height="160" viewBox="0 0 150 150" style="transform:rotate(-10deg);opacity:.85"><defs><path id="ta" d="M22,75 A53,53 0 0,1 128,75"/><path id="tb" d="M18,75 A57,57 0 0,0 132,75"/></defs><g fill="none" stroke="#b3261e" stroke-width="3"><circle cx="75" cy="75" r="70"/><circle cx="75" cy="75" r="40" stroke-width="1.5"/></g><g fill="#b3261e" font-family="Arial" font-weight="700" text-anchor="middle"><text font-size="8.5"><textPath href="#ta" startOffset="50%">${esc(D.name.toUpperCase())}</textPath></text><text font-size="8.5"><textPath href="#tb" startOffset="50%">OFFICIAL SEAL ★ RECORDS</textPath></text><text x="75" y="70" font-size="14">FILED</text><text x="75" y="83" font-size="6.5">${esc(c.no)}</text><text x="75" y="93" font-size="6.5">${(c.created||'').slice(0,10)}</text></g></svg>`;
@@ -312,14 +313,20 @@ function doc(c,ed){const D=db.depts[c.dept];
  <div class="sg"><div><div class="sig">${ed?`<input data-s="c" data-k="sig" value="${esc(c.sig)}">`:esc(c.sig)}</div><small class="officer-credit">Sĩ quan lập báo cáo: ${esc(c.byRank)} ${esc(c.byName)} · Badge #${esc(c.byBadge)}</small><br><small>Ngày lập hồ sơ: ${c.created?fmt(c.created):'khi lưu'}</small></div>${stamp(c,D)}</div>
  <datalist id="ol">${db.officers.filter(o=>o.dept==c.dept).map(o=>`<option value="${esc(o.name)}">`).join('')}</datalist></div>`}
 
-const rows=a=>a.length?`<div style="overflow-x:auto"><table class="tbl"><tr><th>Số hồ sơ</th><th>Tiêu đề</th><th>Loại</th><th>Thời gian xảy ra</th><th>Kết quả</th><th></th></tr>${a.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.f.title)}</td><td>${esc(x.f.type)}</td><td>${fmt(x.f.occurred)}</td><td><span class="tag">${esc(x.f.status)}</span></td><td style="white-space:nowrap"><button data-a="view" data-v="${x.id}">Xem</button>${me.role=='admin'?` <button data-a="edit" data-v="${x.id}">Sửa</button> <button class="d" data-a="del" data-v="${x.id}">Xóa</button>`:''}</td></tr>`).join('')}</table></div>`:'<p style="color:var(--mut)">Chưa có hồ sơ.</p>';
+const rows=a=>a.length?`<div style="overflow-x:auto"><table class="tbl"><tr><th>Số hồ sơ</th><th>Sở</th><th>Tiêu đề</th><th>Loại</th><th>Thời gian xảy ra</th><th>Kết quả</th><th></th></tr>${a.map(x=>{
+ const dColor=(db.depts[x.dept]&&db.depts[x.dept].color)||'var(--ac)';
+ return `<tr><td style="font-weight:600">${esc(x.no)}</td><td><span class="tag" style="border-color:${dColor};color:${dColor};font-weight:700">${esc(x.dept||'—')}</span></td><td>${esc(x.f.title)}</td><td>${esc(x.f.type)}</td><td>${fmt(x.f.occurred)}</td><td><span class="tag">${esc(x.f.status)}</span></td><td style="white-space:nowrap"><button data-a="view" data-v="${x.id}">Xem</button>${me.role=='admin'?` <button data-a="edit" data-v="${x.id}">Sửa</button> <button class="d" data-a="del" data-v="${x.id}">Xóa</button>`:''}</td></tr>`;
+}).join('')}</table></div>`:'<p style="color:var(--mut)">Chưa có hồ sơ.</p>';
 const bars=(a,f)=>a.map(s=>{const k=scope().filter(c=>c.f[f]==s).length,n=scope().length||1;return k?`<div class="row" style="margin-bottom:6px"><span style="flex:0 0 160px">${s} (${k})</span><div class="bar"><i style="width:${k/n*100}%"></i></div></div>`:''}).join('');
-function dash(){const c=scope(),mo=new Date().toISOString().slice(0,7);
- return `<h1>Dashboard</h1><div class="grid"><div class="card stat"><b>${c.length}</b><span>Tổng hồ sơ</span></div><div class="card stat"><b>${c.filter(x=>(x.created||'').startsWith(mo)).length}</b><span>Hồ sơ tháng này</span></div><div class="card stat"><b>${c.reduce((n,x)=>n+x.suspects.filter(s=>s.status=='Đã bắt giữ').length,0)}</b><span>Nghi phạm bị bắt</span></div><div class="card stat"><b>${db.officers.filter(o=>o.dept==me.dept).length}</b><span>Sĩ quan</span></div></div>
- <div class="card"><b>Theo kết quả xử lý</b><br><br>${bars(STS,'status')}</div><div class="card"><b>Theo loại vụ việc</b><br><br>${bars(TY,'type')}</div><div class="card"><b>Hồ sơ gần đây</b><br>${rows(c.slice().reverse().slice(0,6))}</div>`}
-function list(){const q=F.q.toLowerCase(),a=scope().filter(c=>(!F.st||c.f.status==F.st)&&(!q||JSON.stringify([c.no,c.f,c.suspects,c.victims,c.witnesses,c.officers,c.vehicles]).toLowerCase().includes(q)));$('#list').innerHTML=rows(a.slice().reverse())}
-const casesV=()=>`<h1>Lưu trữ hồ sơ</h1><div class="card"><div class="row" style="margin:0"><input data-f="q" placeholder="Tìm số hồ sơ, tên, địa điểm, biển số..."><select data-f="st"><option value="">Mọi kết quả</option>${STS.map(s=>`<option>${s}</option>`).join('')}</select></div></div><div class="card" id="list"></div>`;
-function galleryV(){const photos=scope().flatMap(c=>c.photos.map((p,i)=>({caseId:c.id,caseNo:c.no,title:c.f.title,cap:p.cap,src:p.src,index:i+1})));return `<h1>Thư viện ảnh</h1><p style="color:var(--mut);margin-top:-8px">${photos.length} ảnh · Ảnh lưu trữ trên đám mây Supabase</p>${photos.length?`<div class="gallery">${photos.map(p=>`<article class="gallery-item"><img src="${p.src}" alt="${esc(p.cap||p.title||'Ảnh hồ sơ')}"><b>${esc(p.cap||`Ảnh ${p.index}`)}</b><small>${esc(p.caseNo)} · ${esc(p.title)}</small><button data-a="view" data-v="${esc(p.caseId)}">Mở hồ sơ</button></article>`).join('')}</div>`:'<div class="card"><p>Chưa có ảnh. Thêm ảnh trong phần chỉnh sửa hồ sơ để lưu và xem tại đây.</p></div>'}`}
+function dash(){const c=scope(),my=deptCases(me.dept),mo=new Date().toISOString().slice(0,7);
+ return `<h1>Dashboard</h1><div class="grid"><div class="card stat"><b>${c.length}</b><span>Tổng hồ sơ (Tất cả sở)</span><small style="color:var(--mut)">Sở ${esc(me.dept)}: ${my.length} hồ sơ</small></div><div class="card stat"><b>${c.filter(x=>(x.created||'').startsWith(mo)).length}</b><span>Hồ sơ tháng này</span></div><div class="card stat"><b>${c.reduce((n,x)=>n+x.suspects.filter(s=>s.status=='Đã bắt giữ').length,0)}</b><span>Nghi phạm bị bắt</span></div><div class="card stat"><b>${db.officers.filter(o=>o.dept==me.dept).length}</b><span>Sĩ quan sở</span></div></div>
+ <div class="card"><b>Theo kết quả xử lý (Toàn hệ thống)</b><br><br>${bars(STS,'status')}</div><div class="card"><b>Theo loại vụ việc (Toàn hệ thống)</b><br><br>${bars(TY,'type')}</div><div class="card"><b>Hồ sơ gần đây (Toàn hệ thống)</b><br>${rows(c.slice().reverse().slice(0,6))}</div>`}
+function list(){const q=F.q.toLowerCase(),a=scope().filter(c=>(!F.st||c.f.status==F.st)&&(!F.dept||c.dept==F.dept)&&(!q||JSON.stringify([c.no,c.dept,c.f,c.suspects,c.victims,c.witnesses,c.officers,c.vehicles]).toLowerCase().includes(q)));$('#list').innerHTML=rows(a.slice().reverse())}
+const casesV=()=>`<h1>Lưu trữ hồ sơ</h1><div class="card"><div class="row" style="margin:0"><input data-f="q" placeholder="Tìm số hồ sơ, sở, tên, địa điểm, biển số..." value="${esc(F.q)}"><select data-f="st"><option value="">Mọi kết quả</option>${STS.map(s=>`<option${F.st==s?' selected':''}>${s}</option>`).join('')}</select><select data-f="dept"><option value="">Tất cả các sở</option>${Object.keys(db.depts).map(k=>`<option value="${k}"${F.dept==k?' selected':''}>${k} - ${esc(db.depts[k].name)}</option>`).join('')}</select><button data-a="sync" title="Đồng bộ hồ sơ mới nhất từ Supabase" style="white-space:nowrap">↻ Đồng bộ</button></div></div><div class="card" id="list"></div>`;
+function galleryV(){const photos=scope().flatMap(c=>c.photos.map((p,i)=>({caseId:c.id,caseNo:c.no,dept:c.dept,title:c.f.title,cap:p.cap,src:p.src,index:i+1})));return `<h1>Thư viện ảnh</h1><p style="color:var(--mut);margin-top:-8px">${photos.length} ảnh · Ảnh lưu trữ trên đám mây Supabase (Tất cả sở)</p>${photos.length?`<div class="gallery">${photos.map(p=>{
+ const dColor=(db.depts[p.dept]&&db.depts[p.dept].color)||'var(--ac)';
+ return `<article class="gallery-item"><img src="${p.src}" alt="${esc(p.cap||p.title||'Ảnh hồ sơ')}"><b>${esc(p.cap||`Ảnh ${p.index}`)}</b><small><span class="tag" style="border-color:${dColor};color:${dColor};font-size:10px;padding:0 5px">${esc(p.dept||'')}</span> ${esc(p.caseNo)} · ${esc(p.title)}</small><button data-a="view" data-v="${esc(p.caseId)}">Mở hồ sơ</button></article>`;
+}).join('')}</div>`:'<div class="card"><p>Chưa có ảnh. Thêm ảnh trong phần chỉnh sửa hồ sơ để lưu và xem tại đây.</p></div>'}`}
 const offsV=()=>`<h1>Quản lý sĩ quan</h1><div class="card"><form id="of" class="grid"><input name="name" placeholder="Họ tên" required><input name="rank" placeholder="Cấp bậc" required><input name="badge" placeholder="Badge" required><input name="user" placeholder="Tên đăng nhập" required><input name="pass" placeholder="Mật khẩu" required><select name="role"><option>officer</option><option>admin</option></select><button class="p">Thêm sĩ quan</button></form></div><div class="card"><table class="tbl"><tr><th>Badge</th><th>Họ tên</th><th>Cấp bậc</th><th>Tài khoản</th><th>Quyền</th><th></th></tr>${db.officers.filter(o=>o.dept==me.dept).map(o=>`<tr><td>${esc(o.badge)}</td><td>${esc(o.name)}</td><td>${esc(o.rank)}</td><td>${esc(o.user)}</td><td>${o.role}</td><td>${o.id!=me.id?`<button class="d" data-a="deloff" data-v="${o.id}">Xóa</button>`:''}</td></tr>`).join('')}</table></div>`;
 const setV=()=>{const D=db.depts[me.dept];return `<h1>Logo và dấu mộc: ${me.dept}</h1><div class="grid"><div class="card"><b>Logo sở</b><br><br>${logo(me.dept,110)}<br><input type="file" id="lg" accept="image/*"><br><br><button class="d" data-a="rmlogo">Xóa logo</button></div><div class="card"><b>Dấu mộc (tùy chọn)</b><p style="color:var(--mut);font-size:13px">Chưa tải thì hệ thống tự tạo dấu mộc tròn.</p><div style="text-align:center">${stamp({no:'SAMPLE',created:new Date().toISOString()},D)}</div><input type="file" id="sp" accept="image/*"><br><br><button class="d" data-a="rmstamp">Xóa dấu mộc</button></div></div>`};
 
@@ -363,7 +370,7 @@ function render(){
  else if(view=='set')m.innerHTML=setV();
 }
 
-const blank=()=>{const n=scope().length+1,now=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16);return{dept:me.dept,no:`${me.dept}-${new Date().getFullYear()}-${String(n).padStart(4,'0')}`,f:{type:TY[0],pri:'Trung bình',status:STS[0],occurred:now,reported:now,title:'',loc:''},officers:[{name:me.name,rank:me.rank,badge:me.badge,callsign:'',role:'Sĩ quan lập báo cáo'}],suspects:[],victims:[],witnesses:[],vehicles:[],evidence:[],narr:'',photos:[],sig:me.name,byName:me.name,byRank:me.rank,byBadge:me.badge}};
+const blank=()=>{const n=deptCases(me.dept).length+1,now=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16);return{dept:me.dept,no:`${me.dept}-${new Date().getFullYear()}-${String(n).padStart(4,'0')}`,f:{type:TY[0],pri:'Trung bình',status:STS[0],occurred:now,reported:now,title:'',loc:''},officers:[{name:me.name,rank:me.rank,badge:me.badge,callsign:'',role:'Sĩ quan lập báo cáo'}],suspects:[],victims:[],witnesses:[],vehicles:[],evidence:[],narr:'',photos:[],sig:me.name,byName:me.name,byRank:me.rank,byBadge:me.badge}};
 function ex(cmd,val){const ed=$('#ed');ed.focus();if(sel){const s=getSelection();s.removeAllRanges();s.addRange(sel)}document.execCommand('styleWithCSS',false,true);
  if(cmd=='hr')document.execCommand('insertHTML',false,`<hr style="border:0;border-top:2px solid ${$('[data-col=foreColor]').value}"><p><br></p>`);else document.execCommand(cmd,false,val);draft.narr=ed.innerHTML}
 document.addEventListener('selectionchange',()=>{const ed=$('#ed'),s=getSelection();if(ed&&s.rangeCount&&ed.contains(s.anchorNode))sel=s.getRangeAt(0).cloneRange()});
@@ -441,12 +448,20 @@ document.addEventListener('click',async e=>{const b=e.target.closest('button');i
     },'Đang phê duyệt lệnh...',1000);
   }
  }
+ else if(a=='sync'){
+  await withLoading(async ()=>{
+    await syncAllFromSupabase();
+    if(view=='cases')list();
+    else render();
+    toast('Đã đồng bộ dữ liệu mới nhất từ các sở');
+  },'Đang đồng bộ dữ liệu...',1000);
+ }
  else if(a=='exportWarrant'){
   await withLoading(async ()=>{await exportWarrantImage(v)},'Đang tạo ảnh lệnh PNG...',1000);
  }
  else if(a=='edit'){
   if(me.role!='admin')return toast('Chỉ người có thẩm quyền mới được sửa hồ sơ');
-  const c=db.cases.find(c=>c.id==v&&c.dept==me.dept);
+  const c=db.cases.find(c=>c.id==v);
   if(!c)return toast('Không tìm thấy hồ sơ');
   draft=JSON.parse(JSON.stringify(c));view='edit';render();
  }
@@ -454,7 +469,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('button');i
   if(me.role!='admin')return toast('Chỉ người có thẩm quyền mới được xóa hồ sơ');
   if(confirm('Xóa hồ sơ này?')){
     await withLoading(async ()=>{
-      db.cases=db.cases.filter(c=>c.id!=v||c.dept!=me.dept);
+      db.cases=db.cases.filter(c=>c.id!=v);
       save();render();
       await deleteCaseFromSupabase(v);
     },'Đang xóa hồ sơ...',1000);
