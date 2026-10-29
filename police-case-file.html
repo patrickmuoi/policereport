@@ -47,12 +47,61 @@ main{flex:1;padding:22px;min-width:0;background:var(--bg)}h1{font-size:22px;marg
 .side{background:#fbfcfe}.side button{padding:9px 10px;border-radius:4px;color:#3f4b5b}.side button.on{box-shadow:inset 3px 0 #d9b66f}.br{border-bottom-width:1px}.br .logo{border:0;border-radius:0;background:transparent}.logo img{object-fit:contain}.stat{border-top:3px solid var(--ac)}.tbl th{white-space:nowrap}.ph>div{min-width:0}.ph small{display:block;overflow-wrap:anywhere}.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}.gallery-item{min-width:0;border:1px solid var(--bd);padding:8px;background:#fff}.gallery-item img{display:block;width:100%;height:160px;object-fit:cover;background:var(--bg)}.gallery-item small{display:block;color:var(--mut);overflow-wrap:anywhere}.gallery-item button{margin-top:8px}
 
 @media (max-width:720px){.shell{flex-direction:column}.side{width:100%}#report{padding:14px}}
-@media print{.side,.noprint,.toast{display:none!important}main{padding:0;background:#fff}.shell{display:block}#report{border:0;box-shadow:none;max-width:none;padding:0}}
+@media print{.side,.noprint,.toast,.loading-overlay{display:none!important}main{padding:0;background:#fff}.shell{display:block}#report{border:0;box-shadow:none;max-width:none;padding:0}}
 @media print{.ph img{height:auto;max-height:240px;object-fit:contain}.ph{grid-template-columns:repeat(2,1fr)}}
+
+/* Loading Overlay & Dot Spinner (Uiverse.io by abrahamcalsin) */
+.loading-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:99999}
+.loading-box{background:#fff;padding:22px 28px;border-radius:14px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);border:1px solid rgba(226,232,240,.9);min-width:180px}
+.loading-text{font-size:13.5px;font-weight:600;color:#183153;letter-spacing:.2px;text-align:center}
+
+.dot-spinner{
+  --uib-size: 2.8rem;
+  --uib-speed: .9s;
+  --uib-color: var(--ac, #183153);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: var(--uib-size);
+  width: var(--uib-size);
+}
+.dot-spinner__dot{position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:flex-start;height:100%;width:100%}
+.dot-spinner__dot::before{content:'';height:20%;width:20%;border-radius:50%;background-color:var(--uib-color);transform:scale(0);opacity:.5;animation:pulse0112 calc(var(--uib-speed)*1.111) ease-in-out infinite;box-shadow:0 0 20px rgba(18,31,53,.3)}
+.dot-spinner__dot:nth-child(2){transform:rotate(45deg)}
+.dot-spinner__dot:nth-child(2)::before{animation-delay:calc(var(--uib-speed)*-0.875)}
+.dot-spinner__dot:nth-child(3){transform:rotate(90deg)}
+.dot-spinner__dot:nth-child(3)::before{animation-delay:calc(var(--uib-speed)*-0.75)}
+.dot-spinner__dot:nth-child(4){transform:rotate(135deg)}
+.dot-spinner__dot:nth-child(4)::before{animation-delay:calc(var(--uib-speed)*-0.625)}
+.dot-spinner__dot:nth-child(5){transform:rotate(180deg)}
+.dot-spinner__dot:nth-child(5)::before{animation-delay:calc(var(--uib-speed)*-0.5)}
+.dot-spinner__dot:nth-child(6){transform:rotate(225deg)}
+.dot-spinner__dot:nth-child(6)::before{animation-delay:calc(var(--uib-speed)*-0.375)}
+.dot-spinner__dot:nth-child(7){transform:rotate(270deg)}
+.dot-spinner__dot:nth-child(7)::before{animation-delay:calc(var(--uib-speed)*-0.25)}
+.dot-spinner__dot:nth-child(8){transform:rotate(315deg)}
+.dot-spinner__dot:nth-child(8)::before{animation-delay:calc(var(--uib-speed)*-0.125)}
+@keyframes pulse0112{0%,100%{transform:scale(0);opacity:.5}50%{transform:scale(1);opacity:1}}
 </style>
 </head>
 <body>
 <div id="app"></div><div class="toast" id="toast"></div>
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="loading-box">
+    <div class="dot-spinner">
+      <div class="dot-spinner__dot"></div>
+      <div class="dot-spinner__dot"></div>
+      <div class="dot-spinner__dot"></div>
+      <div class="dot-spinner__dot"></div>
+      <div class="dot-spinner__dot"></div>
+      <div class="dot-spinner__dot"></div>
+      <div class="dot-spinner__dot"></div>
+      <div class="dot-spinner__dot"></div>
+    </div>
+    <div class="loading-text" id="loadingText">Đang xử lý...</div>
+  </div>
+</div>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -85,6 +134,20 @@ if(!Array.isArray(db.warrants))db.warrants=[];
 
 const save=()=>{try{localStorage.setItem('pdb4',JSON.stringify(db))}catch(e){toast('Bộ nhớ đầy, hãy giảm số ảnh')}};
 const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2800)};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const showLoading=(text='Đang xử lý...')=>{const o=$('#loadingOverlay'),t=$('#loadingText');if(t)t.textContent=text;if(o)o.style.display='flex'};
+const hideLoading=()=>{const o=$('#loadingOverlay');if(o)o.style.display='none'};
+async function withLoading(fn,text='Đang xử lý...',minDelay=1000){
+  showLoading(text);
+  const start=Date.now();
+  try{
+    return await fn();
+  }finally{
+    const diff=Date.now()-start;
+    if(diff<minDelay)await sleep(minDelay-diff);
+    hideLoading();
+  }
+}
 const fmt=d=>d?new Date(d).toLocaleString('vi-VN'):'';
 const logo=(k,s)=>{const D=db.depts[k],src=D.logo||ASSET_LOGOS[k];return `<div class="logo" style="width:${s}px;height:${s}px;font-size:${s/4}px">${src?`<img src="${src}" alt="Logo ${esc(k)}">`:k}</div>`};
 const scope=()=>db.cases.filter(c=>c.dept==me.dept);
@@ -303,31 +366,37 @@ document.addEventListener('submit',async e=>{
  if(f.id=='lf'){
   const u=f.u.value.trim(),p=f.p.value;
   let o=db.officers.find(o=>o.dept==LD&&o.user==u&&o.pass==p);
-  if(!o&&sbClient){
-    try{
-      const {data}=await sbClient.from('officers').select('*').eq('dept',LD).eq('username',u).eq('password',p).maybeSingle();
-      if(data){
-        o={id:data.id,dept:data.dept,user:data.username,pass:data.password,name:data.name,rank:data.rank,badge:data.badge,role:data.role};
-        if(!db.officers.some(x=>x.id==o.id))db.officers.push(o);
-        save();
-      }
-    }catch(err){console.error(err)}
-  }
-  if(!o)return toast('Sai tài khoản, mật khẩu hoặc sai sở');
-  me=o;view='dash';render();
+  await withLoading(async ()=>{
+    if(!o&&sbClient){
+      try{
+        const {data}=await sbClient.from('officers').select('*').eq('dept',LD).eq('username',u).eq('password',p).maybeSingle();
+        if(data){
+          o={id:data.id,dept:data.dept,user:data.username,pass:data.password,name:data.name,rank:data.rank,badge:data.badge,role:data.role};
+          if(!db.officers.some(x=>x.id==o.id))db.officers.push(o);
+          save();
+        }
+      }catch(err){console.error(err)}
+    }
+    if(!o)return toast('Sai tài khoản, mật khẩu hoặc sai sở');
+    me=o;view='dash';render();
+  },'Đang đăng nhập...',1000);
  }
  else if(f.id=='wf'){
-  const d=Object.fromEntries(new FormData(f)),n=deptWarrants().length+1;
-  const w={id:'w'+Date.now(),dept:me.dept,no:`${me.dept}-W-${new Date().getFullYear()}-${String(n).padStart(4,'0')}`,type:d.type,citizen:d.citizen.trim(),dob:d.dob,citizenId:d.citizenId.trim(),citizenAddress:d.citizenAddress.trim(),location:d.location.trim(),caseNo:d.caseNo.trim(),reason:d.reason.trim(),items:d.items.trim(),requestedBy:me.name,requestedRank:me.rank,status:'pending',createdAt:new Date().toISOString(),approvedBy:'',approvedRank:'',approvedAt:''};
-  db.warrants.push(w);activeWarrantId=w.id;save();view='warrants';render();toast('Đã gửi yêu cầu, chờ quản trị viên phê duyệt');
-  syncWarrantToSupabase(w);
+  await withLoading(async ()=>{
+    const d=Object.fromEntries(new FormData(f)),n=deptWarrants().length+1;
+    const w={id:'w'+Date.now(),dept:me.dept,no:`${me.dept}-W-${new Date().getFullYear()}-${String(n).padStart(4,'0')}`,type:d.type,citizen:d.citizen.trim(),dob:d.dob,citizenId:d.citizenId.trim(),citizenAddress:d.citizenAddress.trim(),location:d.location.trim(),caseNo:d.caseNo.trim(),reason:d.reason.trim(),items:d.items.trim(),requestedBy:me.name,requestedRank:me.rank,status:'pending',createdAt:new Date().toISOString(),approvedBy:'',approvedRank:'',approvedAt:''};
+    db.warrants.push(w);activeWarrantId=w.id;save();view='warrants';render();toast('Đã gửi yêu cầu, chờ quản trị viên phê duyệt');
+    await syncWarrantToSupabase(w);
+  },'Đang gửi yêu cầu lệnh...',1000);
  }
  else if(f.id=='of'){
   const d=Object.fromEntries(new FormData(f));
   if(db.officers.some(o=>o.user==d.user))return toast('Tên đăng nhập đã tồn tại');
-  const newOff={id:'o'+Date.now(),dept:me.dept,...d};
-  db.officers.push(newOff);save();render();toast('Đã thêm sĩ quan');
-  syncOfficerToSupabase(newOff);
+  await withLoading(async ()=>{
+    const newOff={id:'o'+Date.now(),dept:me.dept,...d};
+    db.officers.push(newOff);save();render();toast('Đã thêm sĩ quan');
+    await syncOfficerToSupabase(newOff);
+  },'Đang thêm sĩ quan...',1000);
  }
 });
 
@@ -345,11 +414,11 @@ document.addEventListener('change',e=>{const t=e.target,d=t.dataset;
  if(t.id=='lg'&&t.files[0])rs(t.files[0],320,'image/png',src=>{db.depts[me.dept].logo=src;save();render();syncDeptToSupabase(me.dept)});
  if(t.id=='sp'&&t.files[0])rs(t.files[0],320,'image/png',src=>{db.depts[me.dept].stamp=src;save();render();syncDeptToSupabase(me.dept)})});
 
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
  if(b.dataset.c)return ex(b.dataset.c);
  const a=b.dataset.a,v=b.dataset.v;if(!a)return;
  if(a=='dept'){LD=v;render()}
- else if(a=='out'){me=null;render()}
+ else if(a=='out'){await withLoading(async ()=>{me=null;render()},'Đang đăng xuất...',800)}
  else if(a=='go'){view=v;if(v=='new')draft=blank();render()}
  else if(a=='view'){cur=db.cases.find(c=>c.id==v);view='view';render()}
  else if(a=='showWarrant'){activeWarrantId=v;render()}
@@ -357,12 +426,16 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
   const w=db.warrants.find(x=>x.id==v&&x.dept==me.dept);
   if(me.role!='admin')return toast('Chỉ quản trị viên mới có thể phê duyệt');
   if(w&&w.status!='approved'){
-    w.status='approved';w.approvedBy=me.name;w.approvedRank=me.rank;w.approvedAt=new Date().toISOString();
-    activeWarrantId=w.id;save();render();toast('Đã phê duyệt lệnh role-play');
-    syncWarrantToSupabase(w);
+    await withLoading(async ()=>{
+      w.status='approved';w.approvedBy=me.name;w.approvedRank=me.rank;w.approvedAt=new Date().toISOString();
+      activeWarrantId=w.id;save();render();toast('Đã phê duyệt lệnh role-play');
+      await syncWarrantToSupabase(w);
+    },'Đang phê duyệt lệnh...',1000);
   }
  }
- else if(a=='exportWarrant'){exportWarrantImage(v)}
+ else if(a=='exportWarrant'){
+  await withLoading(async ()=>{await exportWarrantImage(v)},'Đang tạo ảnh lệnh PNG...',1000);
+ }
  else if(a=='edit'){
   if(me.role!='admin')return toast('Chỉ người có thẩm quyền mới được sửa hồ sơ');
   const c=db.cases.find(c=>c.id==v&&c.dept==me.dept);
@@ -372,9 +445,11 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
  else if(a=='del'){
   if(me.role!='admin')return toast('Chỉ người có thẩm quyền mới được xóa hồ sơ');
   if(confirm('Xóa hồ sơ này?')){
-    db.cases=db.cases.filter(c=>c.id!=v||c.dept!=me.dept);
-    save();render();
-    deleteCaseFromSupabase(v);
+    await withLoading(async ()=>{
+      db.cases=db.cases.filter(c=>c.id!=v||c.dept!=me.dept);
+      save();render();
+      await deleteCaseFromSupabase(v);
+    },'Đang xóa hồ sơ...',1000);
   }
  }
  else if(a=='print'){try{window.print()}catch(x){toast('Hãy mở trang ở tab mới rồi bấm Ctrl+P')}}
@@ -383,9 +458,11 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
  else if(a=='delph'){keep();draft.photos.splice(v,1);render()}
  else if(a=='deloff'){
   if(confirm('Xóa sĩ quan?')){
-    db.officers=db.officers.filter(o=>o.id!=v);
-    save();render();
-    deleteOfficerFromSupabase(v);
+    await withLoading(async ()=>{
+      db.officers=db.officers.filter(o=>o.id!=v);
+      save();render();
+      await deleteOfficerFromSupabase(v);
+    },'Đang xóa sĩ quan...',1000);
   }
  }
  else if(a=='rmlogo'){db.depts[me.dept].logo='';save();render();syncDeptToSupabase(me.dept)}
@@ -393,17 +470,19 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
  else if(a=='save'){
   if(draft.id&&me.role!='admin')return toast('Chỉ người có thẩm quyền mới được sửa hồ sơ');
   keep();if(!(draft.f.title||'').trim()||!(draft.f.loc||'').trim())return toast('Cần nhập Tiêu đề vụ việc và Địa điểm');
-  if(draft.id)db.cases=db.cases.map(c=>c.id==draft.id?draft:c);
-  else{draft.id='c'+Date.now();draft.created=new Date().toISOString();db.cases.push(draft)}
-  save();cur=draft;view='view';render();toast('Đã lưu hồ sơ');
-  syncCaseToSupabase(draft);
+  await withLoading(async ()=>{
+    if(draft.id)db.cases=db.cases.map(c=>c.id==draft.id?draft:c);
+    else{draft.id='c'+Date.now();draft.created=new Date().toISOString();db.cases.push(draft)}
+    save();cur=draft;view='view';render();toast('Đã lưu hồ sơ');
+    await syncCaseToSupabase(draft);
+  },'Đang lưu hồ sơ...',1000);
  }
 });
 
 const deptWarrants=()=>db.warrants.filter(w=>w.dept==me.dept);
 function warrantDocument(w){const D=db.depts[w.dept],fields=[['CÔNG DÂN / ĐỐI TƯỢNG',w.citizen],['Ngày sinh',w.dob],['Số giấy tờ / ID',w.citizenId],['Địa chỉ cư trú',w.citizenAddress],['Địa điểm áp dụng',w.location],['Hồ sơ liên quan',w.caseNo],['Căn cứ / nội dung',w.reason],['TÀI SẢN CẦN TÌM KIẾM',w.items||'Không áp dụng cho lệnh bắt giữ']];return `<section class="warrant-doc"><header class="warrant-head"><small>${esc(D.name)} · ${esc(w.dept)}</small><strong>HỒ SƠ ROLE-PLAY</strong><b>${WARRANT_TYPES[w.type]}</b><span>Mã lệnh: ${esc(w.no)} · ${w.status=='approved'?'ĐÃ PHÊ DUYỆT':'CHỜ PHÊ DUYỆT'}</span><div class="warrant-banner">ROLEPLAY ONLY · KHÔNG CÓ GIÁ TRỊ PHÁP LÝ</div></header><div class="warrant-fields">${fields.map(([label,value])=>`<div class="warrant-field${['Căn cứ / nội dung','Tài sản cần tìm kiếm'].includes(label)?' wide':''}"><small>${label}</small><b>${esc(value||'—')}</b></div>`).join('')}<div class="warrant-field"><small>Người đề nghị</small><b>${esc(w.requestedRank)} ${esc(w.requestedBy)}</b></div><div class="warrant-field"><small>Người phê duyệt</small><b>${esc(w.approvedBy?`${w.approvedRank} ${w.approvedBy}`:'Chưa phê duyệt')}</b></div><div class="warrant-field"><small>Ngày tạo</small><b>${fmt(w.createdAt)}</b></div><div class="warrant-field"><small>Ngày phê duyệt</small><b>${w.approvedAt?fmt(w.approvedAt):'Chưa phê duyệt'}</b></div></div><div class="warrant-sign"><div><small>Người đề nghị</small><br><b>${esc(w.requestedBy)}</b></div><div><small>Người phê duyệt</small><br><b>${esc(w.approvedBy?`${w.approvedRank} ${w.approvedBy}`:'Chưa phê duyệt')}</b></div></div></section>`}
 function warrantsV(){const warrants=deptWarrants().slice().reverse(),selected=warrants.find(w=>w.id==activeWarrantId);return `<h1>Lệnh bắt giữ & khám xét</h1><div class="notice"><b>Chế độ role-play.</b> Lệnh tạo ở đây chỉ dùng trong trò chơi, không phải văn bản pháp lý và không trao quyền bắt giữ hoặc khám xét ngoài đời.</div><div class="card"><h2 style="font-size:17px;margin:0 0 12px">Tạo yêu cầu lệnh</h2><form id="wf" class="grid"><label>Loại lệnh<select name="type"><option value="arrest">Lệnh bắt giữ</option><option value="search">Lệnh khám xét</option></select></label><label>Họ tên công dân / đối tượng<input name="citizen" required></label><label>Ngày sinh<input name="dob" type="date"></label><label>Số giấy tờ / ID<input name="citizenId"></label><label>Địa chỉ cư trú<input name="citizenAddress"></label><label>Địa điểm áp dụng<input name="location" required placeholder="Địa chỉ hoặc mô tả địa điểm"></label><label>Hồ sơ liên quan<input name="caseNo" placeholder="Mã hồ sơ nếu có"></label><label style="grid-column:1/-1">Căn cứ / nội dung<textarea name="reason" required placeholder="Mô tả căn cứ theo tình tiết role-play"></textarea></label><label style="grid-column:1/-1">Tài sản cần tìm kiếm (nếu là lệnh khám xét)<textarea name="items" placeholder="Để trống nếu không áp dụng"></textarea></label><button class="p">Gửi phê duyệt</button></form></div><div class="card"><b>Lệnh của ${esc(me.dept)}</b>${warrants.length?`<div style="overflow-x:auto"><table class="tbl"><tr><th>Mã lệnh</th><th>Loại</th><th>Đối tượng</th><th>Trạng thái</th><th></th></tr>${warrants.map(w=>`<tr><td>${esc(w.no)}</td><td>${WARRANT_TYPES[w.type]}</td><td>${esc(w.citizen)}</td><td><span class="tag">${w.status=='approved'?'Đã phê duyệt':'Chờ phê duyệt'}</span>${w.approvedBy?`<small style="display:block">${esc(w.approvedBy)}</small>`:''}</td><td class="warrant-actions"><button data-a="showWarrant" data-v="${esc(w.id)}">Xem</button>${me.role=='admin'&&w.status!='approved'?`<button class="p" data-a="approveWarrant" data-v="${esc(w.id)}">Phê duyệt</button>`:''}${w.status=='approved'?`<button data-a="exportWarrant" data-v="${esc(w.id)}">Tải ảnh PNG</button>`:''}</td></tr>`).join('')}</table></div>`:'<p style="color:var(--mut)">Chưa có yêu cầu lệnh.</p>'}</div>${selected?warrantDocument(selected):''}`}
-function exportWarrantImage(id){const w=db.warrants.find(x=>x.id==id&&x.dept==me.dept);if(!w||w.status!='approved')return toast('Chỉ tải ảnh lệnh đã được phê duyệt');const fields=[['CÔNG DÂN / ĐỐI TƯỢNG',w.citizen],['NGÀY SINH',w.dob],['SỐ GIẤY TỜ / ID',w.citizenId],['ĐỊA CHỈ CƯ TRÚ',w.citizenAddress],['ĐỊA ĐIỂM ÁP DỤNG',w.location],['HỒ SƠ LIÊN QUAN',w.caseNo],['CĂN CỨ / NỘI DUNG',w.reason],['TÀI SẢN CẦN TÌM KIẾM',w.items||'Không áp dụng cho lệnh bắt giữ']],canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),width=1240,padding=100,textWidth=width-padding*2;ctx.font='22px Arial';const linesFor=value=>{const words=String(value||'—').split(/\s+/),lines=[];let line='';for(const word of words){const next=(line+' '+word).trim();if(ctx.measureText(next).width>textWidth&&line){lines.push(line);line=word}else line=next}lines.push(line);return lines};const layout=fields.map(([label,value])=>({label,lines:linesFor(value)}));let height=390;for(const item of layout)height+=36+item.lines.length*32+22;height+=210;canvas.width=width;canvas.height=height;ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.strokeStyle='#1c3d7a';ctx.lineWidth=3;ctx.strokeRect(30,30,width-60,height-60);ctx.save();ctx.translate(width/2,height/2);ctx.rotate(-.25);ctx.fillStyle='rgba(179,38,30,.08)';ctx.font='bold 76px Arial';ctx.textAlign='center';ctx.fillText('ROLEPLAY ONLY',0,0);ctx.restore();ctx.textAlign='center';ctx.fillStyle='#b3261e';ctx.font='bold 22px Arial';ctx.fillText('ROLEPLAY ONLY · KHÔNG CÓ GIÁ TRỊ PHÁP LÝ',width/2,80);let y=148;ctx.fillStyle='#475569';ctx.font='22px Arial';ctx.fillText(db.depts[w.dept].name,width/2,y);y+=58;ctx.fillStyle='#1c3d7a';ctx.font='bold 38px Arial';ctx.fillText(WARRANT_TYPES[w.type].toUpperCase(),width/2,y);y+=46;ctx.fillStyle='#111827';ctx.font='bold 22px Arial';ctx.fillText(`MÃ LỆNH: ${w.no} · ĐÃ PHÊ DUYỆT`,width/2,y);y+=48;ctx.textAlign='left';for(const item of layout){y+=30;ctx.fillStyle='#64748b';ctx.font='bold 16px Arial';ctx.fillText(item.label,padding,y);y+=34;ctx.fillStyle='#111827';ctx.font='22px Arial';for(const line of item.lines){ctx.fillText(line,padding,y);y+=32}y+=12}const sigY=y+20;ctx.strokeStyle='#64748b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(padding,sigY);ctx.lineTo(500,sigY);ctx.moveTo(740,sigY);ctx.lineTo(width-padding,sigY);ctx.stroke();y=sigY+28;ctx.fillStyle='#111827';ctx.font='17px Arial';ctx.fillText(`Người đề nghị: ${w.requestedRank} ${w.requestedBy}`,padding,y);ctx.fillText(`Người phê duyệt: ${w.approvedRank} ${w.approvedBy}`,740,y);y+=38;ctx.textAlign='center';ctx.fillStyle='#475569';ctx.font='15px Arial';ctx.fillText(`Ngày tạo: ${fmt(w.createdAt)} · Ngày duyệt: ${fmt(w.approvedAt)}`,width/2,y);ctx.fillStyle='#b3261e';ctx.font='bold 18px Arial';ctx.fillText('TÀI LIỆU ROLE-PLAY · KHÔNG DÙNG NGOÀI ĐỜI THẬT',width/2,height-48);canvas.toBlob(blob=>{if(!blob)return toast('Không thể tạo ảnh');const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`${w.no.replace(/[^a-z0-9_-]/gi,'-')}.png`;link.click();URL.revokeObjectURL(url)},'image/png')}
+function exportWarrantImage(id){return new Promise(resolve=>{const w=db.warrants.find(x=>x.id==id&&x.dept==me.dept);if(!w||w.status!='approved'){toast('Chỉ tải ảnh lệnh đã được phê duyệt');return resolve()};const fields=[['CÔNG DÂN / ĐỐI TƯỢNG',w.citizen],['NGÀY SINH',w.dob],['SỐ GIẤY TỜ / ID',w.citizenId],['ĐỊA CHỈ CƯ TRÚ',w.citizenAddress],['ĐỊA ĐIỂM ÁP DỤNG',w.location],['HỒ SƠ LIÊN QUAN',w.caseNo],['CĂN CỨ / NỘI DUNG',w.reason],['TÀI SẢN CẦN TÌM KIẾM',w.items||'Không áp dụng cho lệnh bắt giữ']],canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),width=1240,padding=100,textWidth=width-padding*2;ctx.font='22px Arial';const linesFor=value=>{const words=String(value||'—').split(/\s+/),lines=[];let line='';for(const word of words){const next=(line+' '+word).trim();if(ctx.measureText(next).width>textWidth&&line){lines.push(line);line=word}else line=next}lines.push(line);return lines};const layout=fields.map(([label,value])=>({label,lines:linesFor(value)}));let height=390;for(const item of layout)height+=36+item.lines.length*32+22;height+=210;canvas.width=width;canvas.height=height;ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.strokeStyle='#1c3d7a';ctx.lineWidth=3;ctx.strokeRect(30,30,width-60,height-60);ctx.save();ctx.translate(width/2,height/2);ctx.rotate(-.25);ctx.fillStyle='rgba(179,38,30,.08)';ctx.font='bold 76px Arial';ctx.textAlign='center';ctx.fillText('ROLEPLAY ONLY',0,0);ctx.restore();ctx.textAlign='center';ctx.fillStyle='#b3261e';ctx.font='bold 22px Arial';ctx.fillText('ROLEPLAY ONLY · KHÔNG CÓ GIÁ TRỊ PHÁP LÝ',width/2,80);let y=148;ctx.fillStyle='#475569';ctx.font='22px Arial';ctx.fillText(db.depts[w.dept].name,width/2,y);y+=58;ctx.fillStyle='#1c3d7a';ctx.font='bold 38px Arial';ctx.fillText(WARRANT_TYPES[w.type].toUpperCase(),width/2,y);y+=46;ctx.fillStyle='#111827';ctx.font='bold 22px Arial';ctx.fillText(`MÃ LỆNH: ${w.no} · ĐÃ PHÊ DUYỆT`,width/2,y);y+=48;ctx.textAlign='left';for(const item of layout){y+=30;ctx.fillStyle='#64748b';ctx.font='bold 16px Arial';ctx.fillText(item.label,padding,y);y+=34;ctx.fillStyle='#111827';ctx.font='22px Arial';for(const line of item.lines){ctx.fillText(line,padding,y);y+=32}y+=12}const sigY=y+20;ctx.strokeStyle='#64748b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(padding,sigY);ctx.lineTo(500,sigY);ctx.moveTo(740,sigY);ctx.lineTo(width-padding,sigY);ctx.stroke();y=sigY+28;ctx.fillStyle='#111827';ctx.font='17px Arial';ctx.fillText(`Người đề nghị: ${w.requestedRank} ${w.requestedBy}`,padding,y);ctx.fillText(`Người phê duyệt: ${w.approvedRank} ${w.approvedBy}`,740,y);y+=38;ctx.textAlign='center';ctx.fillStyle='#475569';ctx.font='15px Arial';ctx.fillText(`Ngày tạo: ${fmt(w.createdAt)} · Ngày duyệt: ${fmt(w.approvedAt)}`,width/2,y);ctx.fillStyle='#b3261e';ctx.font='bold 18px Arial';ctx.fillText('TÀI LIỆU ROLE-PLAY · KHÔNG DÙNG NGOÀI ĐỜI THẬT',width/2,height-48);canvas.toBlob(blob=>{if(!blob){toast('Không thể tạo ảnh');return resolve()};const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`${w.no.replace(/[^a-z0-9_-]/gi,'-')}.png`;link.click();URL.revokeObjectURL(url);resolve()},'image/png')})}
 
 render();
 initSupabase();
