@@ -12,8 +12,8 @@
 // ==============================================================================
 
 var SUPABASE_CONFIG = {
-  url: '',      // Ví dụ: 'https://xyzabcdefghijklmno.supabase.co'
-  anonKey: ''  // Ví dụ: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  url: 'https://enlocvtauuhcyrrngskk.supabase.co',      // Ví dụ: 'https://xyzabcdefghijklmno.supabase.co'
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVubG9jdnRhdXVoY3lycm5nc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTA0MDgsImV4cCI6MjEwODgyNjQwOH0.ydGgFGARZOH8it0rhOofPdgpJ9woZP2LANeQ02ZbEmQ'  // Ví dụ: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 };
 
 if (typeof window !== 'undefined') {
