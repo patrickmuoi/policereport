@@ -1,14 +1,6 @@
-// ==============================================================================
-// CẤU HÌNH KẾT NỐI SUPABASE CHO POLICE REPORT
-// ==============================================================================
-// Để bảo mật dự án và không làm lộ API Key trên GitHub:
-// - Bạn có thể cấu hình trực tiếp qua nút "Cấu hình Supabase" trên giao diện Web (lưu vào trình duyệt của bạn).
-// - Hoặc thêm SUPABASE_URL và SUPABASE_ANON_KEY trong mục Settings -> Environment Variables trên Vercel.
-// ==============================================================================
-
 var SUPABASE_CONFIG = {
-  url: '',
-  anonKey: ''
+  url: 'https://enlocvtauuhcyrrngskk.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVubG9jdnRhdXVoY3lycm5nc2trIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTA0MDgsImV4cCI6MjEwODgyNjQwOH0.ydGgFGARZOH8it0rhOofPdgpJ9woZP2LANeQ02ZbEmQ'
 };
 
 if (typeof window !== 'undefined') {

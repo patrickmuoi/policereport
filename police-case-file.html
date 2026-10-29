@@ -46,16 +46,8 @@ main{flex:1;padding:22px;min-width:0;background:var(--bg)}h1{font-size:22px;marg
 .notice{padding:10px 12px;border-left:4px solid #b3261e;background:#fff4f2;color:#7f1d1d;margin-bottom:14px}.warrant-doc{position:relative;overflow:hidden;background:#fff;color:#18212f;border:1px solid #cbd2dc;padding:28px;max-width:880px;margin:14px auto}.warrant-doc:before{content:"ROLEPLAY ONLY";position:absolute;top:48%;left:10%;font-size:58px;font-weight:800;color:rgba(179,38,30,.08);transform:rotate(-25deg);pointer-events:none;white-space:nowrap}.warrant-head{text-align:center;border-bottom:3px solid var(--ac);padding-bottom:14px}.warrant-head strong{display:block;font-size:24px;color:var(--ac)}.warrant-head b{display:block;font-size:28px;margin:8px 0}.warrant-banner{margin-top:10px;padding:8px;background:#b3261e;color:white;font-weight:800;letter-spacing:1px}.warrant-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px;margin-top:18px}.warrant-field{min-width:0;border-bottom:1px solid #cbd2dc;padding-bottom:7px}.warrant-field.wide{grid-column:1/-1}.warrant-field small{display:block;color:#637083;font-size:11px;text-transform:uppercase}.warrant-field b{display:block;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:500}.warrant-sign{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:30px}.warrant-sign>div{border-top:1px solid #4b5563;padding-top:8px}.warrant-actions{display:flex;gap:8px;flex-wrap:wrap}
 .side{background:#fbfcfe}.side button{padding:9px 10px;border-radius:4px;color:#3f4b5b}.side button.on{box-shadow:inset 3px 0 #d9b66f}.br{border-bottom-width:1px}.br .logo{border:0;border-radius:0;background:transparent}.logo img{object-fit:contain}.stat{border-top:3px solid var(--ac)}.tbl th{white-space:nowrap}.ph>div{min-width:0}.ph small{display:block;overflow-wrap:anywhere}.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}.gallery-item{min-width:0;border:1px solid var(--bd);padding:8px;background:#fff}.gallery-item img{display:block;width:100%;height:160px;object-fit:cover;background:var(--bg)}.gallery-item small{display:block;color:var(--mut);overflow-wrap:anywhere}.gallery-item button{margin-top:8px}
 
-/* Supabase status & modal styles */
-.sb-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:#fff;text-decoration:none}
-.sb-pill.ok{border-color:#16a34a;color:#16a34a;background:#f0fdf4}
-.sb-pill.off{border-color:#d97706;color:#d97706;background:#fffbeb}
-.sb-pill.err{border-color:#dc2626;color:#dc2626;background:#fef2f2}
-.modal-mask{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-card{background:#fff;border-radius:8px;max-width:520px;width:100%;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
-
 @media (max-width:720px){.shell{flex-direction:column}.side{width:100%}#report{padding:14px}}
-@media print{.side,.noprint,.toast,.modal-mask,.sb-pill{display:none!important}main{padding:0;background:#fff}.shell{display:block}#report{border:0;box-shadow:none;max-width:none;padding:0}}
+@media print{.side,.noprint,.toast{display:none!important}main{padding:0;background:#fff}.shell{display:block}#report{border:0;box-shadow:none;max-width:none;padding:0}}
 @media print{.ph img{height:auto;max-height:240px;object-fit:contain}.ph{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -79,7 +71,7 @@ const SEC=Object.keys(SC);
 const mkD=(name,color)=>({name,color,logo:'',stamp:''});
 
 let db=null,me=null,view='dash',draft=null,cur=null,LD='LSPD',F={q:'',st:''},sel=null,activeWarrantId=null;
-let showSbModal=!1,sbClient=null,sbState='disconnected',sbErrorMsg='';
+let sbClient=null;
 
 let fresh=!1;try{db=JSON.parse(localStorage.getItem('pdb4'))}catch(e){}
 if(!db)fresh=!0;
@@ -113,18 +105,14 @@ function getSbConfig(){
 
 async function initSupabase(){
   const cfg=getSbConfig();
-  if(!cfg||!cfg.url||!cfg.anonKey){
-    sbClient=null;sbState='disconnected';render();return false;
-  }
+  if(!cfg||!cfg.url||!cfg.anonKey){sbClient=null;return false}
   try{
-    if(!window.supabase||!window.supabase.createClient){
-      sbState='error';sbErrorMsg='Chưa tải được Supabase SDK';render();return false;
-    }
-    sbState='connecting';render();
+    if(!window.supabase||!window.supabase.createClient)return false;
     sbClient=window.supabase.createClient(cfg.url,cfg.anonKey);
     return await syncAllFromSupabase();
   }catch(err){
-    sbState='error';sbErrorMsg=err.message||'Lỗi khởi tạo';render();return false;
+    console.error('Supabase init error:',err);
+    return false;
   }
 }
 
@@ -167,14 +155,11 @@ async function syncAllFromSupabase(){
       }));
     }
 
-    sbState='connected';sbErrorMsg='';
     save();
     render();
     return true;
   }catch(err){
     console.error('Supabase fetch error:',err);
-    sbState='error';sbErrorMsg=err.message||'Lỗi kết nối';
-    render();
     return false;
   }
 }
@@ -244,45 +229,6 @@ async function syncDeptToSupabase(deptKey){
   }catch(e){console.error(e)}
 }
 
-function sbBadge(){
-  if(sbState=='connected')return `<button class="sb-pill ok" data-a="openSbModal" title="Đã kết nối Supabase Cloud">● Supabase Đã kết nối</button>`;
-  if(sbState=='connecting')return `<button class="sb-pill off" data-a="openSbModal" title="Đang kết nối...">⏳ Đang kết nối DB...</button>`;
-  if(sbState=='error')return `<button class="sb-pill err" data-a="openSbModal" title="${esc(sbErrorMsg)}">⚠ Supabase Lỗi (Xem)</button>`;
-  return `<button class="sb-pill off" data-a="openSbModal" title="Chưa kết nối Cloud (Đang dùng bộ nhớ máy)">⚙️ Cấu hình Supabase</button>`;
-}
-
-function sbModalHtml(){
-  const cfg=getSbConfig()||{url:'',anonKey:''};
-  return `<div class="modal-mask"><div class="modal-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h3 style="margin:0;font-size:18px">Cấu hình kết nối Supabase Database</h3>
-      <button data-a="closeSbModal" style="border:0;background:none;font-size:18px;cursor:pointer">✕</button>
-    </div>
-    <p style="font-size:13px;color:var(--mut);margin:0 0 14px">
-      Kết nối cơ sở dữ liệu Supabase để đồng bộ hồ sơ vụ án và tài khoản sĩ quan trên Vercel.
-    </p>
-    <div style="margin-bottom:12px">Trạng thái: <b>${sbState=='connected'?'<span style="color:#16a34a">🟢 Đã kết nối Supabase</span>':sbState=='connecting'?'<span style="color:#d97706">⏳ Đang kết nối...</span>':sbState=='error'?'<span style="color:#dc2626">🔴 Lỗi: '+esc(sbErrorMsg)+'</span>':'<span style="color:var(--mut)">⚪ Chưa kết nối (Lưu tạm trên máy)</span>'}</b></div>
-    <form id="sbf">
-      <label>Supabase Project URL</label>
-      <input name="url" placeholder="https://xyzabcdefghijklmno.supabase.co" value="${esc(cfg.url)}" required>
-      <br><br>
-      <label>Supabase Anon Public Key</label>
-      <textarea name="anonKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." style="min-height:75px;font-family:monospace;font-size:12px" required>${esc(cfg.anonKey)}</textarea>
-      <div style="background:#f8fafc;padding:10px 12px;border-radius:6px;font-size:12px;color:#475569;margin:14px 0;border:1px solid var(--bd)">
-        💡 <b>Cách lấy thông tin:</b><br>
-        1. Đăng nhập <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a> → Vào Project của bạn.<br>
-        2. Mở <b>Project Settings → API</b> → Copy <b>Project URL</b> và khóa <b>anon / public</b>.<br>
-        3. Hãy chắc chắn đã chạy file <b>supabase_schema.sql</b> trong SQL Editor của Supabase!
-      </div>
-      <div class="row" style="margin:0;justify-content:flex-end">
-        <button type="button" class="d" data-a="clearSb">Xóa cấu hình</button>
-        <button type="button" data-a="closeSbModal">Đóng</button>
-        <button type="submit" class="p">Lưu & Kết nối</button>
-      </div>
-    </form>
-  </div></div>`;
-}
-
 function doc(c,ed){const D=db.depts[c.dept];
  const fld=(s,i,d,v)=>{const k=d[0],l=d[1],t=d[2];let x;
   if(ed){const a=`data-s="${s}"${i==null?'':` data-i="${i}"`} data-k="${k}"`;
@@ -316,13 +262,12 @@ function render(){
  if(!me){
   a.innerHTML=`<div class="login">
     <h1>Police Case File</h1>
-    <div style="text-align:center;margin-bottom:14px">${sbBadge()}</div>
     <div class="dp">${Object.keys(db.depts).map(k=>`<button data-a="dept" data-v="${k}" class="${k==LD?'on':''}">${logo(k,52)}<b>${k}</b></button>`).join('')}</div>
     <div class="card">
       <div style="text-align:center;margin-bottom:12px">${logo(LD,96)}<b style="display:block;margin-top:6px">${esc(db.depts[LD].name)}</b></div>
       <form id="lf"><label>Tên đăng nhập</label><input name="u" autocomplete="username" required><br><br><label>Mật khẩu</label><input name="p" type="password" autocomplete="current-password" required><br><br><button class="p" style="width:100%">Đăng nhập ${LD}</button></form>
     </div>
-  </div>${showSbModal?sbModalHtml():''}`;
+  </div>`;
   return;
  }
  const nav=[['dash','Dashboard'],['cases','Lưu trữ hồ sơ'],['gallery','Thư viện ảnh'],['warrants','Lệnh bắt giữ / khám xét'],['new','+ Hồ sơ mới']];
@@ -332,11 +277,10 @@ function render(){
     ${logo(me.dept,60)}
     <b>POLICE CASE FILE</b>
     <small>${esc(db.depts[me.dept].name)}</small>
-    <div style="margin-top:10px">${sbBadge()}</div>
   </div>
   ${nav.map(n=>`<button data-a="go" data-v="${n[0]}" class="${view==n[0]||(view=='edit'&&n[0]=='new')?'on':''}">${n[1]}</button>`).join('')}
   <button data-a="out">Đăng xuất</button>
- </aside><main id="m"></main></div>${showSbModal?sbModalHtml():''}`;
+ </aside><main id="m"></main></div>`;
  const m=$('#m'),bar=`<div class="row noprint"><button class="p" data-a="save">Lưu hồ sơ</button><button data-a="go" data-v="cases">Hủy</button></div>`;
  if(view=='dash')m.innerHTML=dash();
  else if(view=='cases'){m.innerHTML=casesV();list()}
@@ -356,16 +300,7 @@ document.addEventListener('mousedown',e=>{if(e.target.closest('.tb button'))e.pr
 
 document.addEventListener('submit',async e=>{
  e.preventDefault();const f=e.target;
- if(f.id=='sbf'){
-  const fd=new FormData(f),url=fd.get('url').trim(),anonKey=fd.get('anonKey').trim();
-  localStorage.setItem('sb_config',JSON.stringify({url,anonKey}));
-  toast('Đang kết nối Supabase...');
-  const ok=await initSupabase();
-  if(ok){showSbModal=!1;toast('Kết nối Supabase thành công!')}
-  else toast('Kết nối thất bại: '+(sbErrorMsg||'Kiểm tra lại URL & Key'));
-  render();
- }
- else if(f.id=='lf'){
+ if(f.id=='lf'){
   const u=f.u.value.trim(),p=f.p.value;
   let o=db.officers.find(o=>o.dept==LD&&o.user==u&&o.pass==p);
   if(!o&&sbClient){
@@ -413,16 +348,7 @@ document.addEventListener('change',e=>{const t=e.target,d=t.dataset;
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
  if(b.dataset.c)return ex(b.dataset.c);
  const a=b.dataset.a,v=b.dataset.v;if(!a)return;
- if(a=='openSbModal'){showSbModal=!0;render()}
- else if(a=='closeSbModal'){showSbModal=!1;render()}
- else if(a=='clearSb'){
-  if(confirm('Xóa thông tin cấu hình Supabase?')){
-    localStorage.removeItem('sb_config');
-    if(window.SUPABASE_CONFIG)window.SUPABASE_CONFIG={url:'',anonKey:''};
-    sbClient=null;sbState='disconnected';showSbModal=!1;render();toast('Đã xóa kết nối Supabase');
-  }
- }
- else if(a=='dept'){LD=v;render()}
+ if(a=='dept'){LD=v;render()}
  else if(a=='out'){me=null;render()}
  else if(a=='go'){view=v;if(v=='new')draft=blank();render()}
  else if(a=='view'){cur=db.cases.find(c=>c.id==v);view='view';render()}
