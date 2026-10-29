@@ -79,16 +79,39 @@ let turnstileToken='',turnstileWidgetId=null;
 window.onTurnstileLoad=()=>renderTurnstile();
 function renderTurnstile(){
  const el=$('#cf-turnstile-container');
- if(!el||!window.turnstile)return;
+ if(!el)return;
+ if(location.protocol==='file:'){
+  el.innerHTML='<div style="background:#fff4f2;border:1px solid #fecaca;color:#991b1b;padding:8px 10px;border-radius:4px;font-size:12px;text-align:center">💡 <b>Chế độ offline (file://):</b> CAPTCHA tự động bỏ qua khi mở trực tiếp từ máy tính.</div>';
+  turnstileToken='file-local-token';
+  return;
+ }
+ if(!window.turnstile)return;
  turnstileToken='';
  try{
   el.innerHTML='';
   turnstileWidgetId=window.turnstile.render(el,{
    sitekey:CF_SITE_KEY,
    theme:'light',
-   callback:token=>{turnstileToken=token},
+   callback:token=>{turnstileToken=token;$('#cf-turnstile-err')?.remove()},
    'expired-callback':()=>{turnstileToken=''},
-   'error-callback':()=>{turnstileToken=''}
+   'error-callback':code=>{
+    turnstileToken='';
+    console.error('Turnstile error code:',code);
+    let msg='Lỗi xác minh CAPTCHA ('+code+').';
+    if(code=='110200'){
+     msg='⚠️ <b>Lỗi tên miền (110200):</b> Tên miền <code>'+location.hostname+'</code> chưa được thêm vào mục <b>Domains</b> của widget trong Cloudflare Dashboard.';
+    } else if(code=='110600'){
+     msg='⚠️ <b>Lỗi hết hạn (110600):</b> Thời gian trên máy tính bị lệch hoặc tải quá lâu. Vui lòng thử lại.';
+    }
+    let errBox=$('#cf-turnstile-err');
+    if(!errBox){
+     errBox=document.createElement('div');
+     errBox.id='cf-turnstile-err';
+     errBox.style='color:#b3261e;font-size:12px;margin-top:6px;line-height:1.4;text-align:center;background:#fff5f5;padding:6px 10px;border-radius:4px;border:1px solid #fed7d7';
+     el.parentNode.insertBefore(errBox,el.nextSibling);
+    }
+    errBox.innerHTML=msg;
+   }
   });
  }catch(err){console.warn('Turnstile render err:',err)}
 }
@@ -326,7 +349,7 @@ document.addEventListener('submit',async e=>{
   if(!turnstileToken){
     return toast('Vui lòng hoàn thành xác minh Cloudflare CAPTCHA');
   }
-  if(location.protocol!=='file:'){
+  if(turnstileToken!=='file-local-token' && location.protocol!=='file:'){
     try{
       const vRes=await fetch('/api/verify-turnstile',{
         method:'POST',
