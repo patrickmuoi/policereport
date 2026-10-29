@@ -8,7 +8,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="/api/config.js" onerror="this.remove()"></script>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit" async defer></script>
 <style>
 :root{color-scheme:light;--bg:#f4f6f9;--tx:#1a202c;--mut:#6b7280;--bd:#dfe3ea;--ac:#1c3d7a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
@@ -73,55 +72,6 @@ const mkD=(name,color)=>({name,color,logo:'',stamp:''});
 
 let db=null,me=null,view='dash',draft=null,cur=null,LD='LSPD',F={q:'',st:''},sel=null,activeWarrantId=null;
 let sbClient=null;
-const CF_SITE_KEY='0x4AAAAAAAfquq8AlO_yk5Svp';
-const CF_TEST_KEY='1x00000000000000000000AA';
-let turnstileToken='',turnstileWidgetId=null;
-
-function getActiveSiteKey(){
- if(location.hostname==='localhost'||location.hostname==='127.0.0.1') return CF_TEST_KEY;
- return CF_SITE_KEY;
-}
-
-window.onTurnstileLoad=()=>renderTurnstile();
-function renderTurnstile(){
- const el=$('#cf-turnstile-container');
- if(!el)return;
- if(location.protocol==='file:'){
-  el.innerHTML='<div style="background:#fff4f2;border:1px solid #fecaca;color:#991b1b;padding:8px 10px;border-radius:4px;font-size:12px;text-align:center">💡 <b>Chế độ offline (file://):</b> CAPTCHA tự động bỏ qua khi mở trực tiếp từ máy tính.</div>';
-  turnstileToken='file-local-token';
-  return;
- }
- if(!window.turnstile)return;
- turnstileToken='';
- const siteKey=getActiveSiteKey();
- try{
-  el.innerHTML='';
-  turnstileWidgetId=window.turnstile.render(el,{
-   sitekey:siteKey,
-   theme:'light',
-   callback:token=>{turnstileToken=token;$('#cf-turnstile-err')?.remove()},
-   'expired-callback':()=>{turnstileToken=''},
-   'error-callback':code=>{
-    turnstileToken='';
-    console.error('Turnstile error code:',code);
-    let msg='Lỗi xác minh CAPTCHA ('+code+').';
-    if(code=='110200'){
-     msg='⚠️ <b>Lỗi tên miền (110200):</b> Tên miền <code>'+location.hostname+'</code> chưa được lưu trong Cloudflare Turnstile. Hãy đảm bảo bạn đã bấm nút <b>Save</b> ở cuối trang Cloudflare Dashboard.';
-    } else if(code=='110600'){
-     msg='⚠️ <b>Lỗi hết hạn (110600):</b> Vui lòng thử tải lại trang hoặc kiểm tra giờ hệ thống.';
-    }
-    let errBox=$('#cf-turnstile-err');
-    if(!errBox){
-     errBox=document.createElement('div');
-     errBox.id='cf-turnstile-err';
-     errBox.style='color:#b3261e;font-size:12px;margin-top:6px;line-height:1.4;text-align:center;background:#fff5f5;padding:6px 10px;border-radius:4px;border:1px solid #fed7d7';
-     el.parentNode.insertBefore(errBox,el.nextSibling);
-    }
-    errBox.innerHTML=msg;
-   }
-  });
- }catch(err){console.warn('Turnstile render err:',err)}
-}
 
 let fresh=!1;try{db=JSON.parse(localStorage.getItem('pdb4'))}catch(e){}
 if(!db)fresh=!0;
@@ -315,10 +265,9 @@ function render(){
     <div class="dp">${Object.keys(db.depts).map(k=>`<button data-a="dept" data-v="${k}" class="${k==LD?'on':''}">${logo(k,52)}<b>${k}</b></button>`).join('')}</div>
     <div class="card">
       <div style="text-align:center;margin-bottom:12px">${logo(LD,96)}<b style="display:block;margin-top:6px">${esc(db.depts[LD].name)}</b></div>
-      <form id="lf"><label>Tên đăng nhập</label><input name="u" autocomplete="username" required><br><br><label>Mật khẩu</label><input name="p" type="password" autocomplete="current-password" required><br><br><div id="cf-turnstile-container" style="display:flex;justify-content:center;margin-bottom:14px;min-height:65px"></div><button class="p" style="width:100%">Đăng nhập ${LD}</button></form>
+      <form id="lf"><label>Tên đăng nhập</label><input name="u" autocomplete="username" required><br><br><label>Mật khẩu</label><input name="p" type="password" autocomplete="current-password" required><br><br><button class="p" style="width:100%">Đăng nhập ${LD}</button></form>
     </div>
   </div>`;
-  setTimeout(renderTurnstile, 20);
   return;
  }
  const nav=[['dash','Dashboard'],['cases','Lưu trữ hồ sơ'],['gallery','Thư viện ảnh'],['warrants','Lệnh bắt giữ / khám xét'],['new','+ Hồ sơ mới']];
@@ -353,27 +302,6 @@ document.addEventListener('submit',async e=>{
  e.preventDefault();const f=e.target;
  if(f.id=='lf'){
   const u=f.u.value.trim(),p=f.p.value;
-  if(!turnstileToken){
-    return toast('Vui lòng hoàn thành xác minh Cloudflare CAPTCHA');
-  }
-  if(turnstileToken!=='file-local-token' && location.protocol!=='file:'){
-    try{
-      const vRes=await fetch('/api/verify-turnstile',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({token:turnstileToken})
-      });
-      if(vRes.ok){
-        const vData=await vRes.json();
-        if(!vData.success){
-          renderTurnstile();
-          return toast('Xác minh CAPTCHA không hợp lệ, vui lòng thử lại');
-        }
-      }
-    }catch(err){
-      console.warn('Turnstile verify error:',err);
-    }
-  }
   let o=db.officers.find(o=>o.dept==LD&&o.user==u&&o.pass==p);
   if(!o&&sbClient){
     try{
@@ -385,11 +313,7 @@ document.addEventListener('submit',async e=>{
       }
     }catch(err){console.error(err)}
   }
-  if(!o){
-    renderTurnstile();
-    return toast('Sai tài khoản, mật khẩu hoặc sai sở');
-  }
-  turnstileToken='';
+  if(!o)return toast('Sai tài khoản, mật khẩu hoặc sai sở');
   me=o;view='dash';render();
  }
  else if(f.id=='wf'){
