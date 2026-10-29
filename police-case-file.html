@@ -29,7 +29,9 @@ main{flex:1;padding:22px;min-width:0;background:var(--bg)}h1{font-size:22px;marg
 .tbl{width:100%;border-collapse:collapse}.tbl th,.tbl td{padding:8px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:top}.tbl th{font-size:12px;color:var(--mut);text-transform:uppercase}
 .tag{display:inline-block;padding:1px 9px;border:1px solid var(--ac);color:var(--ac);border-radius:99px;font-size:12px}
 .logo{display:flex;align-items:center;justify-content:center;margin:0 auto;border-radius:50%;border:2px dashed var(--ac);color:var(--ac);font-weight:700;overflow:hidden;background:#fff}.logo img{width:100%;height:100%;object-fit:contain}
-.login{max-width:420px;margin:5vh auto;padding:0 16px}.login h1{text-align:center}.dp{display:flex;gap:10px;justify-content:center;margin-bottom:14px}.dp button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border:2px solid var(--bd);width:100px}.dp button.on{border-color:var(--ac);background:#f3f6fc}
+.login-screen{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;padding:32px 16px;background:radial-gradient(circle at 85% 15%,rgba(28,61,122,.12),transparent 34%),linear-gradient(135deg,#eaf0f8,#f7f9fc 55%,#e5ebf4)}
+.login-watermark{position:absolute;z-index:0;right:-72px;bottom:-110px;width:min(48vw,560px);max-height:78vh;object-fit:contain;opacity:.1;filter:saturate(.8);pointer-events:none}
+.login{position:relative;z-index:1;width:100%;max-width:420px;margin:0;padding:0 16px}.login h1{text-align:center}.login .card{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 16px 42px rgba(28,45,75,.12)}.dp{display:flex;gap:10px;justify-content:center;margin-bottom:14px}.dp button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;border:2px solid var(--bd);width:100px}.dp button.on{border-color:var(--ac);background:#f3f6fc}
 .tb{display:flex;flex-wrap:wrap;gap:5px;padding:6px;border:1px solid #999;border-bottom:0;background:#f4f6f9;align-items:center}.tb button,.tb select{width:auto;padding:3px 8px}.tb input[type=color]{width:32px;height:28px;padding:1px}.tb label{display:flex;align-items:center;gap:4px;margin:0;color:#000}
 #ed{min-height:200px;padding:10px;border:1px solid #999;outline:none;font:15px Arial,sans-serif;background:#fff}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:9px 16px;border-radius:8px;display:none;z-index:999}
@@ -47,6 +49,7 @@ main{flex:1;padding:22px;min-width:0;background:var(--bg)}h1{font-size:22px;marg
 .side{background:#fbfcfe}.side button{padding:9px 10px;border-radius:4px;color:#3f4b5b}.side button.on{box-shadow:inset 3px 0 #d9b66f}.br{border-bottom-width:1px}.br .logo{border:0;border-radius:0;background:transparent}.logo img{object-fit:contain}.stat{border-top:3px solid var(--ac)}.tbl th{white-space:nowrap}.ph>div{min-width:0}.ph small{display:block;overflow-wrap:anywhere}.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}.gallery-item{min-width:0;border:1px solid var(--bd);padding:8px;background:#fff}.gallery-item img{display:block;width:100%;height:160px;object-fit:cover;background:var(--bg)}.gallery-item small{display:block;color:var(--mut);overflow-wrap:anywhere}.gallery-item button{margin-top:8px}
 
 @media (max-width:720px){.shell{flex-direction:column}.side{width:100%}#report{padding:14px}}
+@media (max-width:600px){.login-screen{padding:24px 12px}.login-watermark{right:-100px;bottom:-36px;width:78vw;max-height:58vh;opacity:.075}}
 @media print{.side,.noprint,.toast,.loading-overlay{display:none!important}main{padding:0;background:#fff}.shell{display:block}#report{border:0;box-shadow:none;max-width:none;padding:0}}
 @media print{.ph img{height:auto;max-height:240px;object-fit:contain}.ph{grid-template-columns:repeat(2,1fr)}}
 
@@ -149,7 +152,8 @@ async function withLoading(fn,text='Đang xử lý...',minDelay=1000){
   }
 }
 const fmt=d=>d?new Date(d).toLocaleString('vi-VN'):'';
-const logo=(k,s)=>{const D=db.depts[k],src=D.logo||ASSET_LOGOS[k];return `<div class="logo" style="width:${s}px;height:${s}px;font-size:${s/4}px">${src?`<img src="${src}" alt="Logo ${esc(k)}">`:k}</div>`};
+const logoSrc=k=>db.depts[k].logo||ASSET_LOGOS[k];
+const logo=(k,s)=>{const src=logoSrc(k);return `<div class="logo" style="width:${s}px;height:${s}px;font-size:${s/4}px">${src?`<img src="${esc(src)}" alt="Logo ${esc(k)}">`:k}</div>`};
 const scope=()=>db.cases.filter(c=>c.dept==me.dept);
 const keep=()=>{const e=$('#ed');if(e)draft.narr=e.innerHTML};
 const rs=(f,max,type,cb)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL(type,.72))};im.src=r.result};r.readAsDataURL(f)};
@@ -323,12 +327,16 @@ function render(){
  const a=$('#app');
  document.documentElement.style.setProperty('--ac',db.depts[me?me.dept:LD].color);
  if(!me){
-  a.innerHTML=`<div class="login">
+  const watermark=logoSrc(LD);
+  a.innerHTML=`<div class="login-screen">
+    ${watermark?`<img class="login-watermark" src="${esc(watermark)}" alt="" aria-hidden="true">`:''}
+    <div class="login">
     <h1>Police Case File</h1>
     <div class="dp">${Object.keys(db.depts).map(k=>`<button data-a="dept" data-v="${k}" class="${k==LD?'on':''}">${logo(k,52)}<b>${k}</b></button>`).join('')}</div>
     <div class="card">
       <div style="text-align:center;margin-bottom:12px">${logo(LD,96)}<b style="display:block;margin-top:6px">${esc(db.depts[LD].name)}</b></div>
       <form id="lf"><label>Tên đăng nhập</label><input name="u" autocomplete="username" required><br><br><label>Mật khẩu</label><input name="p" type="password" autocomplete="current-password" required><br><br><button class="p" style="width:100%">Đăng nhập ${LD}</button></form>
+    </div>
     </div>
   </div>`;
   return;
