@@ -74,7 +74,13 @@ const mkD=(name,color)=>({name,color,logo:'',stamp:''});
 let db=null,me=null,view='dash',draft=null,cur=null,LD='LSPD',F={q:'',st:''},sel=null,activeWarrantId=null;
 let sbClient=null;
 const CF_SITE_KEY='0x4AAAAAAAfquq8AlO_yk5Svp';
+const CF_TEST_KEY='1x00000000000000000000AA';
 let turnstileToken='',turnstileWidgetId=null;
+
+function getActiveSiteKey(){
+ if(location.hostname==='localhost'||location.hostname==='127.0.0.1') return CF_TEST_KEY;
+ return CF_SITE_KEY;
+}
 
 window.onTurnstileLoad=()=>renderTurnstile();
 function renderTurnstile(){
@@ -87,10 +93,11 @@ function renderTurnstile(){
  }
  if(!window.turnstile)return;
  turnstileToken='';
+ const siteKey=getActiveSiteKey();
  try{
   el.innerHTML='';
   turnstileWidgetId=window.turnstile.render(el,{
-   sitekey:CF_SITE_KEY,
+   sitekey:siteKey,
    theme:'light',
    callback:token=>{turnstileToken=token;$('#cf-turnstile-err')?.remove()},
    'expired-callback':()=>{turnstileToken=''},
@@ -99,9 +106,9 @@ function renderTurnstile(){
     console.error('Turnstile error code:',code);
     let msg='Lỗi xác minh CAPTCHA ('+code+').';
     if(code=='110200'){
-     msg='⚠️ <b>Lỗi tên miền (110200):</b> Tên miền <code>'+location.hostname+'</code> chưa được thêm vào mục <b>Domains</b> của widget trong Cloudflare Dashboard.';
+     msg='⚠️ <b>Lỗi tên miền (110200):</b> Tên miền <code>'+location.hostname+'</code> chưa được lưu trong Cloudflare Turnstile. Hãy đảm bảo bạn đã bấm nút <b>Save</b> ở cuối trang Cloudflare Dashboard.';
     } else if(code=='110600'){
-     msg='⚠️ <b>Lỗi hết hạn (110600):</b> Thời gian trên máy tính bị lệch hoặc tải quá lâu. Vui lòng thử lại.';
+     msg='⚠️ <b>Lỗi hết hạn (110600):</b> Vui lòng thử tải lại trang hoặc kiểm tra giờ hệ thống.';
     }
     let errBox=$('#cf-turnstile-err');
     if(!errBox){
@@ -199,7 +206,7 @@ async function syncAllFromSupabase(){
     }
 
     save();
-    render();
+    if(me) render();
     return true;
   }catch(err){
     console.error('Supabase fetch error:',err);
